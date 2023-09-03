@@ -1,6 +1,11 @@
 [package]
 name = "ext_format"
 version = "0.1.0"
+license = "MIT"
+description = "A small, yet powerful, Rust crate for string interpolation"
+homepage = "https://github.com/FlorianNAdam/ext_format-rs"
+repository = "https://github.com/FlorianNAdam/ext_format-rs"
+readme = "README.md"
 edition = "2021"
 
 [lib]
