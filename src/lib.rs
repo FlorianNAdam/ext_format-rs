@@ -34,6 +34,13 @@
 //! // Output: "Number: 42 42 42"
 //! ```
 //!
+//! This syntax can also be used to avoid unnecessary spaces in the output:
+//! ```rust
+//! # use ext_format::ext_format;
+//! let number = 42;
+//! let output = ext_format!("Number: ${number}${number}${number}");
+//! // Output: "Number: 424242"
+//! ```
 //!
 //! ### Basic Repetition
 //!
@@ -67,22 +74,12 @@
 //!
 //! ```rust
 //! # use ext_format::ext_format;
-//! let items = vec!["apple", "banana", "cherry"];
-//! let counter = vec![1, 2];
-//! let output = ext_format!("Items:\n$(@counter $items)\n*");
-//! // Output:
-//! // Items:
-//! // apple
-//! // banana
-//! ```
-//! ```rust
-//! # use ext_format::ext_format;
 //! let counter = vec![1, 2];
 //! let output = ext_format!("Lines:\n$(@counter line)\n*");
 //! // Output:
 //! // Lines:
-//! // line
-//! // line
+//! //  line
+//! //  line
 //! ```
 //!
 //! ### Repetition with named Iteration Variables
@@ -93,7 +90,7 @@
 //! # use ext_format::ext_format;
 //! let numbers = vec![1, 2, 3];
 //! let output = ext_format!("Numbers: $(@{numbers:number} $number),*");
-//! // Output: "Numbers: 1 1, 2 2, 3 3"
+//! // Output: "Numbers: 1, 2, 3"
 //! ```
 //!
 //! ### Nested Repetitions

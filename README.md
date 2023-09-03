@@ -9,7 +9,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ext_format = "0.1.0"
+ext_format = "0.1.1"
 ```
 
 ## Usage
@@ -32,6 +32,12 @@ let output = ext_format!("Number: ${number:n} $n $n");
 // Output: "Number: 42 42 42"
 ```
 
+This syntax can also be used to avoid unnecessary spaces in the output:
+```rust
+let number = 42;
+let output = ext_format!("Number: ${number}${number}${number}");
+// Output: "Number: 424242"
+```
 
 ### Basic Repetition
 
@@ -62,13 +68,12 @@ let output = ext_format!("Items:\n$($items)(\n)*");
 Use `@` to include variables that control the loop but aren't included in the output.
 
 ```rust
-let items = vec!["apple", "banana"];
 let counter = vec![1, 2];
-let output = ext_format!("Items:\n$(@counter)$($items)\n)*");
+let output = ext_format!("Lines:\n$(@counter line)\n*");
 // Output:
-// Items:
-// apple
-// banana
+// Lines:
+//  line
+//  line
 ```
 
 ### Repetition with named Iteration Variables
@@ -77,8 +82,8 @@ Use `{name:new_name}` to bind a Name to a Variable.
 
 ```rust
 let numbers = vec![1, 2, 3];
-let output = ext_format!("Numbers: $(${numbers:number} $number),*");
-// Output: "Numbers: 1 1, 2 2, 3 3"
+let output = ext_format!("Numbers: $(@{numbers:number} $number),*");
+// Output: "Numbers: 1, 2, 3"
 ```
 
 ### Nested Repetitions
@@ -102,7 +107,7 @@ Variables in a single repetition layer are automatically zipped together, meanin
 ```rust
 let names = vec!["Alice", "Bob"];
 let ages = vec![30, 40];
-let output = ext_format!("Profiles:\n$($names $ages)\n)*");
+let output = ext_format!("Profiles:\n$($names $ages)\n*");
 // Profiles:
 // Alice 30
 // Bob 40
@@ -131,6 +136,7 @@ let output = unindented();
 ```
 
 If the regular `ext_format` was used here, it would result in the following:
+
 ```rust
 fn indented() -> String {
     let matrix = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]];
