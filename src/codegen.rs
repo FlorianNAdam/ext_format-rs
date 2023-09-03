@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn get_macro_definitions() -> TokenStream {
     quote!(
@@ -88,7 +88,6 @@ fn generate_variable_code(
     let var_ident = Ident::new(new_name, Span::call_site());
     let new_tokens = if let Some(inner_ident) = inner_ident {
         let inner_var_ident = Ident::new(&inner_ident, Span::call_site());
-        mapping.insert(inner_ident, ident);
         quote!(
             let #inner_var_ident = #var_ident;
             res.push_str(&#inner_var_ident.to_string());
@@ -108,28 +107,35 @@ fn generate_hidden_variable_code(
 ) -> TokenStream {
     let new_name = mapping.get(&ident).unwrap_or(&ident);
     let var_ident = Ident::new(new_name, Span::call_site());
-    let new_tokens = if let Some(inner_ident) = inner_ident {
-        let inner_var_ident = Ident::new(&inner_ident, Span::call_site());
-        mapping.insert(inner_ident, ident);
-        quote!(
-            let #inner_var_ident = #var_ident;
-        )
-    } else {
-        TokenStream::new()
-    };
-    new_tokens.into()
+    if let Some(inner_ident) = inner_ident {
+        if inner_ident != "_" {
+            let inner_var_ident = Ident::new(&inner_ident, Span::call_site());
+            return quote!(
+                let #inner_var_ident = #var_ident;
+            );
+        }
+    }
+    TokenStream::new()
 }
 
-fn get_variable_names(tokens: &[QuoteToken]) -> Vec<String> {
+fn get_variable_names(tokens: &[QuoteToken]) -> Vec<(String, String)> {
     let mut variables = vec![];
+    let mut inner_variables = HashSet::new();
     for token in tokens.iter() {
-        let variable = match token {
-            QuoteToken::Variable(ref variable, _) => variable,
-            QuoteToken::HiddenVariable(ref variable, _) => variable,
+        let (variable, inner) = match token {
+            QuoteToken::Variable(ref variable, ref inner) => (variable, inner),
+            QuoteToken::HiddenVariable(ref variable, ref inner) => (variable, inner),
             _ => continue,
         };
-
-        variables.push(variable.clone());
+        if !inner_variables.contains(variable) {
+            if let Some(inner) = inner {
+                inner_variables.insert(inner);
+                variables.push((variable.clone(), inner.clone()))
+            } else {
+                let inner_name = "__ext_format_inner_".to_string() + variable;
+                variables.push((variable.clone(), inner_name))
+            }
+        }
     }
     variables
 }
@@ -141,11 +147,10 @@ fn generate_group_code(tokens: Vec<QuoteToken>, separator: Option<String>) -> To
     let mut idents = vec![];
     let mut inner_idents = vec![];
 
-    for variable in variables.iter() {
-        let inner_name = "__ext_format_inner_".to_string() + variable;
-        mapping.insert(variable.clone(), inner_name.clone());
+    for (variable, inner) in variables.iter() {
+        mapping.insert(variable.clone(), inner.clone());
         idents.push(Ident::new(&variable, Span::call_site()));
-        inner_idents.push(Ident::new(&inner_name, Span::call_site()));
+        inner_idents.push(Ident::new(&inner, Span::call_site()));
     }
 
     let token_stream: TokenStream = generate_inner_code(tokens, mapping).into();
@@ -289,12 +294,10 @@ mod tests {
         let expected = unindent(
             r#"
             let mut iterator = fizip ! (var1 . iter () , hidden_var . iter ()) . collect :: < Vec < _ >> () ;
-            @ if ! iterator . is_empty () { for (i , nested_tuple ! (__ext_format_inner_var1 , __ext_format_inner_hidden_var)) in iterator . iter () . enumerate () { res . push_str ("A") ;
-            @ let mapped_var1 = __ext_format_inner_var1 ;
+            @ if ! iterator . is_empty () { for (i , nested_tuple ! (mapped_var1 , _)) in iterator . iter () . enumerate () { res . push_str ("A") ;
+            @ let mapped_var1 = mapped_var1 ;
             @ res . push_str (& mapped_var1 . to_string ()) ;
-            @ let _ = __ext_format_inner_hidden_var ;
-            @ if i < iterator . len () - 1 { res . push_str (", ") ; } } } ;
-        "#,
+            @ if i < iterator . len () - 1 { res . push_str (", ") ; } } } ;"#,
         ).trim().replace("\n@", "");
 
         assert_eq!(output_str, expected);
